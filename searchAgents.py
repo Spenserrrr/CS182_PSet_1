@@ -26,8 +26,6 @@ import sys
 # This portion is written for you, but will only work #
 #       after you fill in parts of search.py          #
 #######################################################
-
-
 class SearchAgent(Agent):
     """
     This very general search agent finds a path using a supplied search
@@ -252,14 +250,95 @@ class AStarFoodSearchAgent(SearchAgent):
         self.searchType = FoodSearchProblem
 
 def simpleHeuristic(state, problem: FoodSearchProblem):
-     "*** YOUR CODE HERE ***" 
-
+     return len(state[1])
 
 def foodHeuristic(state, problem: FoodSearchProblem):
-    """
-    Create your own heurstic. The heuristic should
-        (1) reduce the number of states that we need to search 
-        (2) be admissible and consistent
-    """
+    position, remaining_food, energized_time = state
+
+    if not remaining_food:
+        return 0
     
-    "*** YOUR CODE HERE ***"
+    subproblem = FoodSearchProblem(problem.game_grid, visualize=True)
+    subproblem.start_state = (position, frozenset(remaining_food), energized_time)
+    
+    def bfs_search(problem):
+        queue = []
+        start_state = problem.getStartState()
+        queue.append((start_state, 0))
+        visited = set()
+        visited.add(start_state)
+        while queue:
+            state, cost = queue.pop(0)
+            
+            # Return if we find a goal state
+            if problem.isGoalState(state):
+                return cost
+                        
+            # Add successors to queue
+            for successor, _, step_cost in problem.getSuccessors(state):
+                if successor in visited:
+                    continue
+                visited.add(successor)
+                queue.append((successor, cost + step_cost))
+        
+        return 0
+    
+    return bfs_search(subproblem)
+
+"""
+Below is a real heuristic that use MST
+def foodHeuristic(state, problem: FoodSearchProblem):
+    position, remaining_food, _ = state
+
+    if not remaining_food:
+        return 0
+
+    # Include Pacman's position in MST computation
+    all_points = [position]
+    for food in remaining_food:
+        all_points.append(food)
+
+    def prim_mst(points, problem):
+        if not points:
+            return 0
+
+        num_nodes = len(points)
+        edges = {i: [] for i in range(num_nodes)}
+
+        # Compute all pairs of Manhattan distances
+        for i in range(num_nodes):
+            for j in range(i + 1, num_nodes):
+                distance = abs(points[i][0] - points[j][0]) + abs(points[i][1] - points[j][1])
+                edges[i].append((distance, j))
+                edges[j].append((distance, i))
+
+        # Prim's algorithm
+        mst_cost = 0
+        visited = set()
+        min_edge_cost = [float("inf")] * num_nodes
+        min_edge_cost[0] = 0 
+
+        while len(visited) < num_nodes:
+            # Find the unvisited node with smallest edge cost
+            min_cost = float("inf")
+            min_node = None
+            for i in range(num_nodes):
+                if i not in visited and min_edge_cost[i] < min_cost:
+                    min_cost = min_edge_cost[i]
+                    min_node = i
+
+            if min_node is None:
+                break
+
+            visited.add(min_node)
+            mst_cost += min_cost
+
+            # Update edge costs for unvisited ones
+            for cost, neighbor in edges.get(min_node, []):
+                if neighbor not in visited and cost < min_edge_cost[neighbor]:
+                    min_edge_cost[neighbor] = cost
+
+        return mst_cost
+
+    return prim_mst(all_points, problem)  # Compute MST cost manually
+"""
